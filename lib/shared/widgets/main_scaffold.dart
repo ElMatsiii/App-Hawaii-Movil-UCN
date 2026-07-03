@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/providers/auth_provider_notif.dart';
 import '../providers/shell_navigation_provider.dart';
 
 class MainScaffold extends ConsumerStatefulWidget {
@@ -36,16 +37,34 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    // Cubre también el primer build (antes de que exista un "old widget").
     WidgetsBinding.instance.addPostFrameCallback((_) => _syncIndex());
 
+    final authState = ref.watch(authProvider);
+    final autenticado = authState is AuthAuthenticated;
+
+    if (autenticado) {
+      return _ScaffoldAutenticado(shell: widget.shell);
+    } else {
+      return _ScaffoldInvitado(shell: widget.shell);
+    }
+  }
+}
+
+// ── Navbar cuando hay sesión: 3 destinos normales ─────────────────────────────
+
+class _ScaffoldAutenticado extends StatelessWidget {
+  final StatefulNavigationShell shell;
+  const _ScaffoldAutenticado({required this.shell});
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      body: widget.shell,
+      body: shell,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: widget.shell.currentIndex,
-        onDestinationSelected: (index) => widget.shell.goBranch(
+        selectedIndex: shell.currentIndex,
+        onDestinationSelected: (index) => shell.goBranch(
           index,
-          initialLocation: index == widget.shell.currentIndex,
+          initialLocation: index == shell.currentIndex,
         ),
         destinations: const [
           NavigationDestination(
@@ -62,6 +81,43 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
             icon: Icon(Icons.fact_check_outlined),
             selectedIcon: Icon(Icons.fact_check),
             label: 'Asistencia',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Navbar cuando no hay sesión: Horario + Iniciar sesión ─────────────────────
+
+class _ScaffoldInvitado extends StatelessWidget {
+  final StatefulNavigationShell shell;
+  const _ScaffoldInvitado({required this.shell});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: shell,
+      bottomNavigationBar: NavigationBar(
+        // El invitado solo puede estar en el branch 0 (Horario).
+        selectedIndex: 0,
+        onDestinationSelected: (index) {
+          if (index == 0) {
+            shell.goBranch(0, initialLocation: true);
+          } else {
+            context.push('/login');
+          }
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.calendar_today_outlined),
+            selectedIcon: Icon(Icons.calendar_today),
+            label: 'Horario',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.login_outlined),
+            selectedIcon: Icon(Icons.login),
+            label: 'Iniciar sesión',
           ),
         ],
       ),

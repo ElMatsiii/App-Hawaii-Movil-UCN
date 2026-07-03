@@ -24,9 +24,7 @@ class HorarioFiltrosSheet extends ConsumerStatefulWidget {
   final ValueChanged<bool> onMisRamosToggle;
 
   const HorarioFiltrosSheet({
-    super.key,
-    required this.misRamosActivo,
-    required this.onMisRamosToggle,
+    required this.misRamosActivo, required this.onMisRamosToggle, super.key,
   });
 
   @override

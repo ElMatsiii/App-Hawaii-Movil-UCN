@@ -109,8 +109,8 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
           // Solo invalidamos master y cursos — las asistencias por curso se
           // recargan on-demand cuando el usuario abre el detalle, evitando
           // N requests simultáneos al refrescar.
-          ref.invalidate(masterProvider);
-          ref.invalidate(misCursosProvider);
+          ref..invalidate(masterProvider)
+          ..invalidate(misCursosProvider);
         },
         child: master.when(
           loading: () => const Center(child: CircularProgressIndicator()),

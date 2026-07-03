@@ -77,8 +77,8 @@ class MisCursosScreen extends ConsumerWidget {
           );
 
           Future<void> onRefresh() async {
-            ref.invalidate(masterProvider);
-            ref.invalidate(misCursosProvider);
+            ref..invalidate(masterProvider)
+            ..invalidate(misCursosProvider);
           }
 
           return RefreshIndicator(

@@ -190,8 +190,8 @@ class _HorarioScreenState extends ConsumerState<HorarioScreen> {
           master: masterData,
           onRetry: () => ref.invalidate(horarioProvider),
           onRefresh: () async {
-            ref.invalidate(masterProvider);
-            ref.invalidate(horarioProvider);
+            ref..invalidate(masterProvider)
+            ..invalidate(horarioProvider);
           },
         ),
       ),
