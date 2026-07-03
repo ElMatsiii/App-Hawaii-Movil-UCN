@@ -1,12 +1,12 @@
 part of 'asistencia_screen.dart';
 
-//detalle de asistenica
-class _DetalleAsistencia extends ConsumerWidget {
+// ── Bottom sheet de detalle de asistencia ─────────────────────────────────────
+class _AsistenciaDetalleSheet extends ConsumerWidget {
   final CursoUsuarioEntity curso;
   final int semestreId;
   final String rutEstudiante;
 
-  const _DetalleAsistencia({
+  const _AsistenciaDetalleSheet({
     required this.curso,
     required this.semestreId,
     required this.rutEstudiante,
@@ -25,41 +25,92 @@ class _DetalleAsistencia extends ConsumerWidget {
       ),
     );
 
-    return asistenciasAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error resumen: $e')),
-      data: (asistencias) {
-        final resumen = asistencias
-            .where(
-              (a) => a.codigo == curso.codigo && a.seccion == curso.seccion,
-            )
-            .firstOrNull;
-
-        return detalleAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Column(
-            children: [
-              if (resumen != null)
-                _ResumenCard(resumen: resumen, clases: const []),
-              Expanded(
-                child: Center(
-                  child: Text('No se pudo cargar el detalle: $e'),
-                ),
-              ),
-            ],
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.75,
+      maxChildSize: 0.95,
+      minChildSize: 0.4,
+      builder: (_, scrollController) => Column(
+        children: [
+          // Handle
+          const SizedBox(height: 8),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.outlineVariant,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-          data: (clases) => _VistaDetalle(resumen: resumen, clases: clases),
-        );
-      },
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  curso.nombre,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                Text(
+                  '${curso.codigo} · Sección ${curso.seccion}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          // Contenido scrolleable
+          Expanded(
+            child: asistenciasAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error resumen: $e')),
+              data: (asistencias) {
+                final resumen = asistencias
+                    .where(
+                      (a) => a.codigo == curso.codigo && a.seccion == curso.seccion,
+                    )
+                    .firstOrNull;
+
+                return detalleAsync.when(
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                    children: [
+                      if (resumen != null)
+                        _ResumenCard(resumen: resumen, clases: const []),
+                      Center(child: Text('No se pudo cargar el detalle: $e')),
+                    ],
+                  ),
+                  data: (clases) => _VistaDetalle(
+                    resumen: resumen,
+                    clases: clases,
+                    scrollController: scrollController,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
+
 class _VistaDetalle extends StatelessWidget {
   final AsistenciaCursoEntity? resumen;
   final List<AsistenciaClaseEntity> clases;
+  final ScrollController? scrollController;
 
-  const _VistaDetalle({required this.resumen, required this.clases});
+  const _VistaDetalle({
+    required this.resumen,
+    required this.clases,
+    this.scrollController,
+  });
 
   Map<String, List<AsistenciaClaseEntity>> _agruparPorFecha() {
     final mapa = <String, List<AsistenciaClaseEntity>>{};
@@ -94,7 +145,9 @@ class _VistaDetalle extends StatelessWidget {
   Widget build(BuildContext context) {
     final porFecha = _agruparPorFecha();
 
-    return Column(
+    return ListView(
+      controller: scrollController,
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 80),
       children: [
         _ResumenCard(resumen: resumen, clases: clases),
         if (clases.isNotEmpty)
@@ -119,26 +172,19 @@ class _VistaDetalle extends StatelessWidget {
             ),
           ),
         if (clases.isEmpty)
-          const Expanded(
-            child: Center(child: Text('Sin registros de asistencia aun')),
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Text('Sin registros de asistencia aun'),
+            ),
           )
         else
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-              itemCount: porFecha.length,
-              itemBuilder: (_, i) {
-                final fecha = porFecha.keys.elementAt(i);
-                final bloques = porFecha[fecha]!;
-                return _FechaCard(
-                  fecha: fecha,
-                  fechaFormateada: _formatFecha(fecha),
-                  diaSemana: _diaSemana(fecha),
-                  bloques: bloques,
-                );
-              },
-            ),
-          ),
+          ...porFecha.entries.map((entry) => _FechaCard(
+                fecha: entry.key,
+                fechaFormateada: _formatFecha(entry.key),
+                diaSemana: _diaSemana(entry.key),
+                bloques: entry.value,
+              ),),
       ],
     );
   }

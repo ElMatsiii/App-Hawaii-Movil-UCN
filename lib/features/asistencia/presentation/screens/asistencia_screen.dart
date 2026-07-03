@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../../shared/providers/shell_navigation_provider.dart';
 import '../../../../shared/settings/accessibility_settings.dart';
 import '../../../../shared/theme/app_colors.dart';
 import '../../../../shared/widgets/accessibility_settings_button.dart';
@@ -22,8 +21,6 @@ part 'asistencia_course_list.dart';
 part 'asistencia_detail.dart';
 part 'qr_scanner_sheet.dart';
 
-const _asistenciaShellIndex = 2;
-
 //pantalla principal
 
 class AsistenciaScreen extends ConsumerStatefulWidget {
@@ -34,21 +31,8 @@ class AsistenciaScreen extends ConsumerStatefulWidget {
 }
 
 class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
-  CursoUsuarioEntity? _cursoSeleccionado;
-
   @override
   Widget build(BuildContext context) {
-    // Al salir de la pestaña "Asistencia" reiniciamos la selección para que,
-    // al volver, se muestre siempre la pantalla principal de la sección
-    // (lista de cursos) y no el último detalle que se estaba viendo.
-    ref.listen<int>(currentShellIndexProvider, (previous, next) {
-      if (previous == _asistenciaShellIndex &&
-          next != _asistenciaShellIndex &&
-          _cursoSeleccionado != null) {
-        setState(() => _cursoSeleccionado = null);
-      }
-    });
-
     final authState = ref.watch(authProvider);
 
     if (authState is! AuthAuthenticated) {
@@ -75,97 +59,84 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
     final usuario = authState.usuario;
     final master = ref.watch(masterProvider);
 
-    return PopScope(
-      // Solo permitimos que el back del sistema salga de esta rama cuando
-      // estamos en la pantalla principal (lista de cursos). Si hay un curso
-      // seleccionado, el back debe volver a la lista en vez de cerrar la app.
-      canPop: _cursoSeleccionado == null,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        setState(() => _cursoSeleccionado = null);
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            _cursoSeleccionado != null
-                ? _cursoSeleccionado!.nombre
-                : 'Asistencia',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          leading: _cursoSeleccionado != null
-              ? IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => setState(() => _cursoSeleccionado = null),
-                )
-              : IconButton(
-                  icon: const Icon(Icons.assignment_outlined),
-                  tooltip: 'Justificar asistencia',
-                  onPressed: () {
-                    showDialog<void>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Justificar asistencia'),
-                        content: const Text(
-                          'Serás redirigido al formulario oficial de justificación de asistencia de la UCN.',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(),
-                            child: const Text('Cancelar'),
-                          ),
-                          FilledButton.icon(
-                            icon: const Icon(Icons.open_in_browser),
-                            label: const Text('Abrir formulario'),
-                            onPressed: () {
-                              Navigator.of(ctx).pop();
-                              launchUrl(
-                                Uri.parse('https://docs.google.com/forms/d/e/1FAIpQLScgGuPfQU-W5yYPEU-5M1EcgO0fYskyEjelR2Si434IuTHnuw/viewform'),
-                                mode: LaunchMode.externalApplication,
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.assignment_outlined),
+          tooltip: 'Justificar asistencia',
+          onPressed: () {
+            showDialog<void>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Justificar asistencia'),
+                content: const Text(
+                  'Serás redirigido al formulario oficial de justificación de asistencia de la UCN.',
                 ),
-          actions: const [
-            AccessibilitySettingsButton(),
-            LogoutButton(),
-          ],
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _abrirEscaner(context),
-          icon: const Icon(Icons.qr_code_scanner),
-          label: const Text('Pasar asistencia'),
-        ),
-        body: master.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
-          data: (masterData) {
-            final semestreActual = semestreActualOrNull(masterData);
-            if (semestreActual == null) {
-              return const Center(
-                child: Text('No hay semestres disponibles'),
-              );
-            }
-
-            if (_cursoSeleccionado == null) {
-              return _ListaCursos(
-                usuario: usuario.rut,
-                semestreId: semestreActual.id,
-                onCursoTap: (curso) => setState(() => _cursoSeleccionado = curso),
-              );
-            }
-
-            return _DetalleAsistencia(
-              curso: _cursoSeleccionado!,
-              semestreId: semestreActual.id,
-              rutEstudiante: usuario.rut,
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('Cancelar'),
+                  ),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.open_in_browser),
+                    label: const Text('Abrir formulario'),
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      launchUrl(
+                        Uri.parse('https://docs.google.com/forms/d/e/1FAIpQLScgGuPfQU-W5yYPEU-5M1EcgO0fYskyEjelR2Si434IuTHnuw/viewform'),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    },
+                  ),
+                ],
+              ),
             );
           },
         ),
+        title: const Text('Asistencia'),
+        actions: const [
+          AccessibilitySettingsButton(),
+          LogoutButton(),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _abrirEscaner(context),
+        icon: const Icon(Icons.qr_code_scanner),
+        label: const Text('Pasar asistencia'),
+      ),
+      body: master.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Error: $e')),
+        data: (masterData) {
+          final semestreActual = semestreActualOrNull(masterData);
+          if (semestreActual == null) {
+            return const Center(child: Text('No hay semestres disponibles'));
+          }
+
+          return _ListaCursos(
+            usuario: usuario.rut,
+            semestreId: semestreActual.id,
+            onCursoTap: (curso) => _mostrarDetalle(context, curso, semestreActual.id, usuario.rut),
+          );
+        },
+      ),
+    );
+  }
+
+  void _mostrarDetalle(
+    BuildContext context,
+    CursoUsuarioEntity curso,
+    int semestreId,
+    String rutEstudiante,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _AsistenciaDetalleSheet(
+        curso: curso,
+        semestreId: semestreId,
+        rutEstudiante: rutEstudiante,
       ),
     );
   }
@@ -179,6 +150,7 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
     );
   }
 }
+
 
 AttendanceStateColors _attendanceColors(BuildContext context, WidgetRef ref) {
   final colorBlindMode =

@@ -38,10 +38,16 @@ class _HorarioScreenState extends ConsumerState<HorarioScreen> {
     super.dispose();
   }
 
-  void _activarMisRamos() {
+  Future<void> _activarMisRamos() async {
     _misRamosActivado = true;
     _searchController.text = ':';
     ref.read(horarioSearchProvider.notifier).state = ':';
+
+    // Pre-poblar el filtro de carrera con la carrera del usuario logueado.
+    final carreraId = await ref.read(carreraUsuarioProvider.future);
+    if (carreraId != null && mounted) {
+      ref.read(horarioFiltroProvider.notifier).setCarreraId(carreraId);
+    }
   }
 
   void _desactivarMisRamos() {
