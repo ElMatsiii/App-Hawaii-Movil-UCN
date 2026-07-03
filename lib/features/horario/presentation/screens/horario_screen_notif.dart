@@ -189,6 +189,10 @@ class _HorarioScreenState extends ConsumerState<HorarioScreen> {
           horario: horario,
           master: masterData,
           onRetry: () => ref.invalidate(horarioProvider),
+          onRefresh: () async {
+            ref.invalidate(masterProvider);
+            ref.invalidate(horarioProvider);
+          },
         ),
       ),
     );
@@ -199,7 +203,16 @@ class _HorarioScreenState extends ConsumerState<HorarioScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => const HorarioFiltrosSheet(),
+      builder: (_) => HorarioFiltrosSheet(
+        misRamosActivo: _misRamosActivado,
+        onMisRamosToggle: (activar) {
+          if (activar) {
+            _activarMisRamos();
+          } else {
+            _desactivarMisRamos();
+          }
+        },
+      ),
     );
   }
 }
@@ -210,11 +223,13 @@ class _HorarioBody extends StatelessWidget {
   final AsyncValue<List<HorarioItemEntity>> horario;
   final MasterEntity master;
   final VoidCallback onRetry;
+  final Future<void> Function() onRefresh;
 
   const _HorarioBody({
     required this.horario,
     required this.master,
     required this.onRetry,
+    required this.onRefresh,
   });
 
   @override
@@ -224,7 +239,59 @@ class _HorarioBody extends StatelessWidget {
       error: (e, _) => _ErrorView(mensaje: e.toString(), onRetry: onRetry),
       data: (items) => items.isEmpty
           ? const _EmptyView()
-          : HorarioGrilla(items: items, master: master),
+          : _GrillaConRefresh(
+              items: items,
+              master: master,
+              onRefresh: onRefresh,
+            ),
+    );
+  }
+}
+
+/// El HorarioGrilla usa PageView (horizontal) + SingleChildScrollView
+/// (vertical por día). Para no interferir con esos gestos, el RefreshIndicator
+/// se activa mediante un ScrollController dedicado que vive en un
+/// NotificationListener invisible encima de la grilla.
+class _GrillaConRefresh extends StatefulWidget {
+  final List<HorarioItemEntity> items;
+  final MasterEntity master;
+  final Future<void> Function() onRefresh;
+
+  const _GrillaConRefresh({
+    required this.items,
+    required this.master,
+    required this.onRefresh,
+  });
+
+  @override
+  State<_GrillaConRefresh> createState() => _GrillaConRefreshState();
+}
+
+class _GrillaConRefreshState extends State<_GrillaConRefresh> {
+  final _refreshKey = GlobalKey<RefreshIndicatorState>();
+
+  @override
+  Widget build(BuildContext context) {
+    // Stack: la grilla ocupa todo el espacio (como antes del refresh).
+    // El RefreshIndicator envuelve un ListView de 0 ítems — solo existe
+    // para capturar el overscroll en el eje vertical sin afectar a la grilla.
+    return Stack(
+      children: [
+        // Capa principal: la grilla con su layout original intacto.
+        HorarioGrilla(items: widget.items, master: widget.master),
+
+        // Capa transparente encima: captura el gesto de pull-to-refresh.
+        RefreshIndicator(
+          key: _refreshKey,
+          onRefresh: widget.onRefresh,
+          child: IgnorePointer(
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

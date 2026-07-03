@@ -104,21 +104,38 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
         icon: const Icon(Icons.qr_code_scanner),
         label: const Text('Pasar asistencia'),
       ),
-      body: master.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (masterData) {
-          final semestreActual = semestreActualOrNull(masterData);
-          if (semestreActual == null) {
-            return const Center(child: Text('No hay semestres disponibles'));
-          }
-
-          return _ListaCursos(
-            usuario: usuario.rut,
-            semestreId: semestreActual.id,
-            onCursoTap: (curso) => _mostrarDetalle(context, curso, semestreActual.id, usuario.rut),
-          );
+      body: RefreshIndicator(
+        onRefresh: () async {
+          // Solo invalidamos master y cursos — las asistencias por curso se
+          // recargan on-demand cuando el usuario abre el detalle, evitando
+          // N requests simultáneos al refrescar.
+          ref.invalidate(masterProvider);
+          ref.invalidate(misCursosProvider);
         },
+        child: master.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: SizedBox(
+                height: constraints.maxHeight,
+                child: Center(child: Text('Error: $e')),
+              ),
+            ),
+          ),
+          data: (masterData) {
+            final semestreActual = semestreActualOrNull(masterData);
+            if (semestreActual == null) {
+              return const Center(child: Text('No hay semestres disponibles'));
+            }
+
+            return _ListaCursos(
+              usuario: usuario.rut,
+              semestreId: semestreActual.id,
+              onCursoTap: (curso) => _mostrarDetalle(context, curso, semestreActual.id, usuario.rut),
+            );
+          },
+        ),
       ),
     );
   }

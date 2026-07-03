@@ -76,16 +76,24 @@ class MisCursosScreen extends ConsumerWidget {
             ),
           );
 
-          return cursosAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => _ErrorCursos(
-              mensaje: e.toString(),
-              onRetry: () => ref.invalidate(misCursosProvider),
-            ),
-            data: (cursos) => _CursosList(
-              cursos: cursos,
-              semestreNombre: semestreActual.nombre,
-              semestreId: semestreActual.id,
+          Future<void> onRefresh() async {
+            ref.invalidate(masterProvider);
+            ref.invalidate(misCursosProvider);
+          }
+
+          return RefreshIndicator(
+            onRefresh: onRefresh,
+            child: cursosAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => _ErrorCursos(
+                mensaje: e.toString(),
+                onRetry: () => ref.invalidate(misCursosProvider),
+              ),
+              data: (cursos) => _CursosList(
+                cursos: cursos,
+                semestreNombre: semestreActual.nombre,
+                semestreId: semestreActual.id,
+              ),
             ),
           );
         },
@@ -129,6 +137,7 @@ class _CursosList extends StatelessWidget {
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8),
+      physics: const AlwaysScrollableScrollPhysics(),
       itemCount: cursos.length,
       itemBuilder: (_, i) => _CursoCard(
         curso: cursos[i],
@@ -643,21 +652,29 @@ class _ErrorCursos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 48),
-            const SizedBox(height: 12),
-            Text(mensaje, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton.tonal(
-              onPressed: onRetry,
-              child: const Text('Reintentar'),
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: constraints.maxHeight,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.error_outline, size: 48),
+                  const SizedBox(height: 12),
+                  Text(mensaje, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  FilledButton.tonal(
+                    onPressed: onRetry,
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );

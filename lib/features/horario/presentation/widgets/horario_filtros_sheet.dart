@@ -20,7 +20,14 @@ const _diasAbrev = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 // ── Sheet principal ───────────────────────────────────────────────────────────
 
 class HorarioFiltrosSheet extends ConsumerStatefulWidget {
-  const HorarioFiltrosSheet({super.key});
+  final bool misRamosActivo;
+  final ValueChanged<bool> onMisRamosToggle;
+
+  const HorarioFiltrosSheet({
+    super.key,
+    required this.misRamosActivo,
+    required this.onMisRamosToggle,
+  });
 
   @override
   ConsumerState<HorarioFiltrosSheet> createState() =>
@@ -133,6 +140,16 @@ class _HorarioFiltrosSheetState extends ConsumerState<HorarioFiltrosSheet> {
                 controller: controller,
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
                 children: [
+                  // ── Mis Ramos ──────────────────────────────────────────
+                  _MisRamosToggle(
+                    activo: widget.misRamosActivo,
+                    onToggle: (v) {
+                      widget.onMisRamosToggle(v);
+                      if (v) Navigator.pop(context);
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
                   // ── Sección: Académico ─────────────────────────────────
                   const _SeccionLabel(
                     label: 'Académico',
@@ -337,6 +354,7 @@ class _HorarioFiltrosSheetState extends ConsumerState<HorarioFiltrosSheet> {
 
   int _contarFiltrosActivos(HorarioFiltro filtro) {
     var count = 0;
+    if (widget.misRamosActivo) count++;
     if (filtro.area != -1) count++;
     if (filtro.sala != -1) count++;
     if (filtro.profesor != -1) count++;
@@ -980,6 +998,55 @@ class _BuscadorModalState<T> extends State<_BuscadorModal<T>> {
                     ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Toggle Mis Ramos ──────────────────────────────────────────────────────────
+
+class _MisRamosToggle extends StatelessWidget {
+  final bool activo;
+  final ValueChanged<bool> onToggle;
+
+  const _MisRamosToggle({required this.activo, required this.onToggle});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: activo ? colors.primaryContainer : colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: activo ? colors.primary : colors.outlineVariant,
+          width: activo ? 1.5 : 1,
+        ),
+      ),
+      child: SwitchListTile(
+        value: activo,
+        onChanged: onToggle,
+        secondary: Icon(
+          Icons.person_pin_outlined,
+          color: activo ? colors.primary : colors.onSurfaceVariant,
+        ),
+        title: Text(
+          'Mis ramos',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: activo ? colors.onPrimaryContainer : colors.onSurface,
+          ),
+        ),
+        subtitle: Text(
+          'Solo los ramos en los que estás inscrito',
+          style: TextStyle(
+            fontSize: 12,
+            color: activo
+                ? colors.onPrimaryContainer.withValues(alpha: 0.7)
+                : colors.onSurfaceVariant,
+          ),
         ),
       ),
     );

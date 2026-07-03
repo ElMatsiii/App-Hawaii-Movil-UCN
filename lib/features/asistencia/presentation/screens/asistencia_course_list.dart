@@ -37,6 +37,7 @@ class _ListaCursos extends ConsumerWidget {
   ) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 80),
+      physics: const AlwaysScrollableScrollPhysics(),
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
