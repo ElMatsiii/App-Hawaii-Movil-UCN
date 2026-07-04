@@ -570,37 +570,175 @@ class _NotasCard extends StatelessWidget {
   final NotasCursoEntity notasCurso;
   const _NotasCard({required this.notasCurso});
 
+  // Detecta notas con formato NOTA_1, NOTA_2, NOTA_FINAL, NOTA_1_FINAL, etc.
+  // Solo mayúsculas, guion bajo como separador.
+  static bool _esNotaDestacada(String nombre) {
+    const patternNotaFinal = r'^NOTA(_\d+)*(_FINAL)?$';
+    const patternNotaCatedra = r'^NOTA(_\d+)*(_CATEDRA)?(_\d+)?$';
+    return RegExp(patternNotaFinal).hasMatch(nombre.trim()) || RegExp(patternNotaCatedra).hasMatch(nombre.trim());
+  }
+
+  // Parsea la nota a double; retorna null si no es numérica.
+  static double? _parseNota(String nota) {
+    if (nota.isEmpty || nota == '-' || nota == 'S/N') return null;
+    return double.tryParse(nota.replaceAll(',', '.'));
+  }
+
+  // Color según el valor numérico de la nota (escala 1-7 chilena).
+  static Color _colorNota(double? valor, ColorScheme colors) {
+    if (valor == null) return colors.surfaceContainerHighest;
+    if (valor >= 5.0) return colors.primaryContainer;
+    if (valor >= 4.0) return colors.secondaryContainer;
+    return colors.errorContainer;
+  }
+
+  static Color _colorNotaText(double? valor, ColorScheme colors) {
+    if (valor == null) return colors.onSurfaceVariant;
+    if (valor >= 5.0) return colors.onPrimaryContainer;
+    if (valor >= 4.0) return colors.onSecondaryContainer;
+    return colors.onErrorContainer;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: notasCurso.notas
-              .map(
-                (n) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          n.nombre,
-                        ),
-                      ),
-                      Text(
-                        n.nota,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
+    final colors = Theme.of(context).colorScheme;
+    final notas = notasCurso.notas;
+
+    final finales = notas.where((n) => _esNotaDestacada(n.nombre)).toList();
+    final evaluaciones = notas.where((n) => !_esNotaDestacada(n.nombre)).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Nota(s) final(es) destacadas ──────────────────────────────────
+        if (finales.isNotEmpty) ...[
+          ...finales.map((n) {
+            final valor = _parseNota(n.nota);
+            final bg = _colorNota(valor, colors);
+            final fg = _colorNotaText(valor, colors);
+            return Card(
+              color: bg,
+              margin: const EdgeInsets.only(bottom: 8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
                 ),
-              )
-              .toList(),
-        ),
-      ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            n.nombre,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: fg,
+                            ),
+                          ),
+                          Text(
+                            'Nota final del curso',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: fg.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      n.nota,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: fg,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+          if (evaluaciones.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Evaluaciones',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: colors.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.4,
+                    ),
+              ),
+            ),
+        ],
+        // ── Lista de evaluaciones ──────────────────────────────────────────
+        if (evaluaciones.isNotEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Column(
+                children: evaluaciones.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final n = entry.value;
+                  final valor = _parseNota(n.nota);
+                  final notaColor = _colorNota(valor, colors);
+                  final notaTextColor = _colorNotaText(valor, colors);
+                  final isLast = i == evaluaciones.length - 1;
+
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                n.nombre,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: notaColor,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                n.nota.isEmpty ? '-' : n.nota,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: notaTextColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (!isLast)
+                        Divider(
+                          height: 1,
+                          indent: 14,
+                          endIndent: 14,
+                          color: colors.outlineVariant.withValues(alpha: 0.5),
+                        ),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
