@@ -637,13 +637,6 @@ class _NotasCard extends StatelessWidget {
                               color: fg,
                             ),
                           ),
-                          Text(
-                            'Nota final del curso',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: fg.withValues(alpha: 0.7),
-                            ),
-                          ),
                         ],
                       ),
                     ),
