@@ -132,7 +132,6 @@ class AuthRepository implements IAuthRepository {
         orElse: () => Cookie('', ''),
       );
       if (session.value.isEmpty) return;
- 
       final payload = <String, dynamic>{
         'name': session.name,
         'value': session.value,

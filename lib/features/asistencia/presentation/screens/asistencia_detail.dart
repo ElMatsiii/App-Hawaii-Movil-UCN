@@ -242,7 +242,7 @@ class _FechaCard extends ConsumerWidget {
             : Icons.check_circle_outline;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
         border:

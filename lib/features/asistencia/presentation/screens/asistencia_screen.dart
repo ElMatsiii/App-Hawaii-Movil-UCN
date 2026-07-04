@@ -67,28 +67,62 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
           onPressed: () {
             showDialog<void>(
               context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Justificar asistencia'),
-                content: const Text(
-                  'Serás redirigido al formulario oficial de justificación de asistencia de la UCN.',
+              builder: (ctx) => Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    child: const Text('Cancelar'),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 12, 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: Text(
+                                'Justificar asistencia',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Serás redirigido al formulario oficial de justificación de asistencia de la UCN.',
+                      ),
+                      const SizedBox(height: 20),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton.icon(
+                          icon: const Icon(Icons.open_in_browser),
+                          label: const Text('Abrir formulario'),
+                          onPressed: () {
+                            Navigator.of(ctx).pop();
+                            launchUrl(
+                              Uri.parse('https://docs.google.com/forms/d/e/1FAIpQLScgGuPfQU-W5yYPEU-5M1EcgO0fYskyEjelR2Si434IuTHnuw/viewform'),
+                              mode: LaunchMode.externalApplication,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                  FilledButton.icon(
-                    icon: const Icon(Icons.open_in_browser),
-                    label: const Text('Abrir formulario'),
-                    onPressed: () {
-                      Navigator.of(ctx).pop();
-                      launchUrl(
-                        Uri.parse('https://docs.google.com/forms/d/e/1FAIpQLScgGuPfQU-W5yYPEU-5M1EcgO0fYskyEjelR2Si434IuTHnuw/viewform'),
-                        mode: LaunchMode.externalApplication,
-                      );
-                    },
-                  ),
-                ],
+                ),
               ),
             );
           },
@@ -104,38 +138,21 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
         icon: const Icon(Icons.qr_code_scanner),
         label: const Text('Pasar asistencia'),
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          // Solo invalidamos master y cursos — las asistencias por curso se
-          // recargan on-demand cuando el usuario abre el detalle, evitando
-          // N requests simultáneos al refrescar.
-          ref..invalidate(masterProvider)
-          ..invalidate(misCursosProvider);
-        },
-        child: master.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => LayoutBuilder(
-            builder: (context, constraints) => SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: SizedBox(
-                height: constraints.maxHeight,
-                child: Center(child: Text('Error: $e')),
-              ),
-            ),
-          ),
-          data: (masterData) {
-            final semestreActual = semestreActualOrNull(masterData);
-            if (semestreActual == null) {
-              return const Center(child: Text('No hay semestres disponibles'));
-            }
+      body: master.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Error: $e')),
+        data: (masterData) {
+          final semestreActual = semestreActualOrNull(masterData);
+          if (semestreActual == null) {
+            return const Center(child: Text('No hay semestres disponibles'));
+          }
 
-            return _ListaCursos(
-              usuario: usuario.rut,
-              semestreId: semestreActual.id,
-              onCursoTap: (curso) => _mostrarDetalle(context, curso, semestreActual.id, usuario.rut),
-            );
-          },
-        ),
+          return _ListaCursos(
+            usuario: usuario.rut,
+            semestreId: semestreActual.id,
+            onCursoTap: (curso) => _mostrarDetalle(context, curso, semestreActual.id, usuario.rut),
+          );
+        },
       ),
     );
   }

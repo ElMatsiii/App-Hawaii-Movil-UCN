@@ -98,28 +98,62 @@ class _HorarioScreenState extends ConsumerState<HorarioScreen> {
               onPressed: () {
                 showDialog<void>(
                   context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Instructivos UCN'),
-                    content: const Text(
-                      'Accede a los instructivos de la Escuela de Ingeniería de la UCN.',
+                  builder: (ctx) => Dialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: const Text('Cerrar'),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 12, 20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Expanded(
+                                child: Padding(
+                                  padding: EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    'Instructivos UCN',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: () => Navigator.of(ctx).pop(),
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Accede a los instructivos de la Escuela de Ingeniería de la UCN.',
+                          ),
+                          const SizedBox(height: 20),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: FilledButton.icon(
+                              icon: const Icon(Icons.open_in_browser),
+                              label: const Text('Abrir'),
+                              onPressed: () {
+                                Navigator.of(ctx).pop();
+                                launchUrl(
+                                  Uri.parse('https://losvilos.ucn.cl/InstructivosEscuelaIngenieria/'),
+                                  mode: LaunchMode.externalApplication,
+                                );
+                              },
+                            ),
+                          ),
+                        ],
                       ),
-                      FilledButton.icon(
-                        icon: const Icon(Icons.open_in_browser),
-                        label: const Text('Abrir'),
-                        onPressed: () {
-                          Navigator.of(ctx).pop();
-                          launchUrl(
-                            Uri.parse('https://losvilos.ucn.cl/InstructivosEscuelaIngenieria/'),
-                            mode: LaunchMode.externalApplication,
-                          );
-                        },
-                      ),
-                    ],
+                    ),
                   ),
                 );
               },
@@ -179,20 +213,28 @@ class _HorarioScreenState extends ConsumerState<HorarioScreen> {
           ),
         ),
       ),
-      body: master.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _ErrorView(
-          mensaje: e.toString(),
-          onRetry: () => ref.invalidate(masterProvider),
-        ),
-        data: (masterData) => _HorarioBody(
-          horario: horario,
-          master: masterData,
-          onRetry: () => ref.invalidate(horarioProvider),
-          onRefresh: () async {
-            ref..invalidate(masterProvider)
-            ..invalidate(horarioProvider);
-          },
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref..invalidate(masterProvider)
+          ..invalidate(horarioProvider);
+          await Future.wait([
+            // ignore: body_might_complete_normally_catch_error
+            ref.read(masterProvider.future).catchError((_) {}),
+            // ignore: body_might_complete_normally_catch_error
+            ref.read(horarioProvider.future).catchError((_) {}),
+          ]);
+        },
+        child: master.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => _ErrorView(
+            mensaje: e.toString(),
+            onRetry: () => ref.invalidate(masterProvider),
+          ),
+          data: (masterData) => _HorarioBody(
+            horario: horario,
+            master: masterData,
+            onRetry: () => ref.invalidate(horarioProvider),
+          ),
         ),
       ),
     );
@@ -203,16 +245,7 @@ class _HorarioScreenState extends ConsumerState<HorarioScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => HorarioFiltrosSheet(
-        misRamosActivo: _misRamosActivado,
-        onMisRamosToggle: (activar) {
-          if (activar) {
-            _activarMisRamos();
-          } else {
-            _desactivarMisRamos();
-          }
-        },
-      ),
+      builder: (_) => HorarioFiltrosSheet(misRamosActivo: false, onMisRamosToggle: (bool value) {  },),
     );
   }
 }
@@ -223,13 +256,11 @@ class _HorarioBody extends StatelessWidget {
   final AsyncValue<List<HorarioItemEntity>> horario;
   final MasterEntity master;
   final VoidCallback onRetry;
-  final Future<void> Function() onRefresh;
 
   const _HorarioBody({
     required this.horario,
     required this.master,
     required this.onRetry,
-    required this.onRefresh,
   });
 
   @override
@@ -239,59 +270,7 @@ class _HorarioBody extends StatelessWidget {
       error: (e, _) => _ErrorView(mensaje: e.toString(), onRetry: onRetry),
       data: (items) => items.isEmpty
           ? const _EmptyView()
-          : _GrillaConRefresh(
-              items: items,
-              master: master,
-              onRefresh: onRefresh,
-            ),
-    );
-  }
-}
-
-/// El HorarioGrilla usa PageView (horizontal) + SingleChildScrollView
-/// (vertical por día). Para no interferir con esos gestos, el RefreshIndicator
-/// se activa mediante un ScrollController dedicado que vive en un
-/// NotificationListener invisible encima de la grilla.
-class _GrillaConRefresh extends StatefulWidget {
-  final List<HorarioItemEntity> items;
-  final MasterEntity master;
-  final Future<void> Function() onRefresh;
-
-  const _GrillaConRefresh({
-    required this.items,
-    required this.master,
-    required this.onRefresh,
-  });
-
-  @override
-  State<_GrillaConRefresh> createState() => _GrillaConRefreshState();
-}
-
-class _GrillaConRefreshState extends State<_GrillaConRefresh> {
-  final _refreshKey = GlobalKey<RefreshIndicatorState>();
-
-  @override
-  Widget build(BuildContext context) {
-    // Stack: la grilla ocupa todo el espacio (como antes del refresh).
-    // El RefreshIndicator envuelve un ListView de 0 ítems — solo existe
-    // para capturar el overscroll en el eje vertical sin afectar a la grilla.
-    return Stack(
-      children: [
-        // Capa principal: la grilla con su layout original intacto.
-        HorarioGrilla(items: widget.items, master: widget.master),
-
-        // Capa transparente encima: captura el gesto de pull-to-refresh.
-        RefreshIndicator(
-          key: _refreshKey,
-          onRefresh: widget.onRefresh,
-          child: IgnorePointer(
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: const [],
-            ),
-          ),
-        ),
-      ],
+          : HorarioGrilla(items: items, master: master),
     );
   }
 }
@@ -307,34 +286,42 @@ class _ErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.cloud_off_rounded, size: 64, color: colors.error),
-            const SizedBox(height: 16),
-            Text(
-              'No se pudo cargar el horario',
-              style: Theme.of(context).textTheme.titleMedium,
-              textAlign: TextAlign.center,
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: constraints.maxHeight,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.cloud_off_rounded, size: 64, color: colors.error),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No se pudo cargar el horario',
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    mensaje,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: colors.onSurfaceVariant),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton.tonal(
+                    onPressed: onRetry,
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              mensaje,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: colors.onSurfaceVariant),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.tonal(
-              onPressed: onRetry,
-              child: const Text('Reintentar'),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -346,28 +333,36 @@ class _EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.event_busy_rounded,
-            size: 64,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Sin resultados',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Ajusta los filtros para ver el horario',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: constraints.maxHeight,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.event_busy_rounded,
+                  size: 64,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
+                const SizedBox(height: 16),
+                Text(
+                  'Sin resultados',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Ajusta los filtros para ver el horario',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }

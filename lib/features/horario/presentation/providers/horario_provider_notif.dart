@@ -231,6 +231,7 @@ final horarioFiltradoProvider =
     final rolesCursos = ref.watch(idsCursosPorRolProvider);
     final modo = ref.watch(modoVistaHorarioProvider);
     final nombreUsuario = currentUser.nombre.toLowerCase();
+    final carreraUsuario = ref.watch(carreraUsuarioActivaProvider);
 
     return rolesCursos.when(
       loading: () => const AsyncLoading(),
@@ -253,13 +254,18 @@ final horarioFiltradoProvider =
         }
 
         return horario.whenData(
-          (items) => _aplicarFiltrosLocales(
-            items
+          (items) {
+            var misItems = items
                 .where((i) => roles.comoEstudiante.contains(i.idCurso))
-                .toList(),
-            filtro,
-            '',
-          ),
+                .toList();
+            // Filtro adicional por carrera del usuario (sin tocar horarioFiltroProvider)
+            if (carreraUsuario != null) {
+              misItems = misItems
+                  .where((i) => i.carreras.any((c) => c.id == carreraUsuario))
+                  .toList();
+            }
+            return _aplicarFiltrosLocales(misItems, filtro, '');
+          },
         );
       },
     );
@@ -347,6 +353,10 @@ final cursosDisponiblesProvider =
 });
 
 // ── Provider auxiliar (carrera del usuario) ───────────────────────────────────
+
+// ── Carrera activa del usuario (seteada al login, limpiada al logout) ─────────
+// Separada de horarioFiltroProvider para no disparar re-requests a la API.
+final carreraUsuarioActivaProvider = StateProvider<int?>((ref) => null);
 
 final carreraUsuarioProvider = FutureProvider<int?>((ref) async {
   final currentUser = ref.watch(currentUserProvider);

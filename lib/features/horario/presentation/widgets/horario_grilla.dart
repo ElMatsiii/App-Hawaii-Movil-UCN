@@ -262,50 +262,65 @@ class _BloqueRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Padding(
-      // Padding externo: separa la fila de los bordes de la pantalla
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Etiqueta del bloque — ancho fijo, pegada al borde del padding
-            SizedBox(
-              width: 52,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    bloque.nombre,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: colors.primary,
-                    ),
-                  ),
-                  if (bloque.horario != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      bloque.horario!.replaceAll(' - ', '\n'),
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: colors.onSurfaceVariant,
-                        height: 1.3,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 52,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Text(
+                        bloque.nombre,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: colors.primary,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ],
+                      if (bloque.horario != null) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          bloque.horario!.replaceAll(' - ', '\n'),
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: colors.onSurfaceVariant,
+                            height: 1.3,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            // Tarjetas — Expanded para ocupar todo el ancho restante
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: items.map((item) => _ClaseCard(item: item)).toList(),
+              const SizedBox(width: 10),
+              VerticalDivider(
+                width: 1,
+                thickness: 1,
+                color: colors.outlineVariant,
               ),
-            ),
-          ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: items.map((item) => _ClaseCard(item: item)).toList(),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -406,36 +421,54 @@ class _ClaseDetalleDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(item.curso),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _DetalleRow(icon: Icons.person_outline, label: item.profesor),
-          _DetalleRow(icon: Icons.room_outlined, label: item.sala),
-          _DetalleRow(icon: Icons.business_outlined, label: item.area),
-          _DetalleRow(icon: Icons.tag, label: 'NRC: ${item.nrc}'),
-          if (item.carreras.isNotEmpty)
-            _DetalleRow(
-              icon: Icons.school_outlined,
-              label: item.carreras
-                  .map((c) => '${c.nombre} (sem. ${c.semestre})')
-                  .join(', '),
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 12, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    item.curso,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
             ),
-          if (item.comentario.isNotEmpty)
-            _DetalleRow(
-              icon: Icons.comment_outlined,
-              label: item.comentario,
-            ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cerrar'),
+            const SizedBox(height: 12),
+            _DetalleRow(icon: Icons.person_outline, label: item.profesor),
+            _DetalleRow(icon: Icons.room_outlined, label: item.sala),
+            _DetalleRow(icon: Icons.business_outlined, label: item.area),
+            _DetalleRow(icon: Icons.tag, label: 'NRC: ${item.nrc}'),
+            if (item.carreras.isNotEmpty)
+              _DetalleRow(
+                icon: Icons.school_outlined,
+                label: item.carreras
+                    .map((c) => '${c.nombre} (sem. ${c.semestre})')
+                    .join(', '),
+              ),
+            if (item.comentario.isNotEmpty)
+              _DetalleRow(
+                icon: Icons.comment_outlined,
+                label: item.comentario,
+              ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

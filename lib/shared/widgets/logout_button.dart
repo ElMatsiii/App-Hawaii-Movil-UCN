@@ -28,22 +28,56 @@ class LogoutButton extends ConsumerWidget {
   void _confirmarLogout(BuildContext context, WidgetRef ref) {
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Cerrar sesión'),
-        content: const Text('¿Quieres cerrar tu sesión?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancelar'),
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 12, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Cerrar sesión',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Text('¿Quieres cerrar tu sesión?'),
+              const SizedBox(height: 20),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    ref.read(authProvider.notifier).logout();
+                  },
+                  child: const Text('Cerrar sesión'),
+                ),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              ref.read(authProvider.notifier).logout();
-            },
-            child: const Text('Cerrar sesión'),
-          ),
-        ],
+        ),
       ),
     );
   }
