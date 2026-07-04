@@ -190,7 +190,7 @@ AttendanceStateColors _attendanceColors(BuildContext context, WidgetRef ref) {
   final colorBlindMode =
       ref.watch(accessibilitySettingsProvider).colorBlindMode;
   return AttendanceStateColors.resolve(
-    brightness: Theme.of(context).brightness,
+    colorScheme: Theme.of(context).colorScheme,
     colorBlindMode: colorBlindMode,
   );
 }

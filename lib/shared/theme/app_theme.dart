@@ -8,34 +8,24 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
 
-  static ColorScheme _lightScheme() => ColorScheme.fromSeed(
-        seedColor: AppColors.seedBlue,
+  static ColorScheme _lightScheme(Color seed) => ColorScheme.fromSeed(
+        seedColor: seed,
         brightness: Brightness.light,
       ).copyWith(
-        primary: AppColors.seedBlue,
-        onPrimary: Colors.white,
-        secondary: AppColors.terracotta,
-        tertiary: AppColors.teal,
-        surface: AppColors.lightSurface,
         error: AppColors.ucnRed,
         outline: AppColors.outline,
       );
 
-  static ColorScheme _darkScheme() => ColorScheme.fromSeed(
-        seedColor: AppColors.seedBlue,
+  static ColorScheme _darkScheme(Color seed) => ColorScheme.fromSeed(
+        seedColor: seed,
         brightness: Brightness.dark,
       ).copyWith(
-        primary: const Color(0xFFA9C7FF),
-        onPrimary: const Color(0xFF00305F),
-        secondary: const Color(0xFFE0A56B),
-        tertiary: const Color(0xFF7FD0DF),
-        surface: AppColors.darkSurface,
         error: const Color(0xFFFFB4AB),
       );
 
-  static ThemeData get light => ThemeData(
+  static ThemeData light([Color seed = AppColors.seedBlue]) => ThemeData(
         useMaterial3: true,
-        colorScheme: _lightScheme(),
+        colorScheme: _lightScheme(seed),
         scaffoldBackgroundColor: AppColors.lightBackground,
         textTheme: GoogleFonts.sourceSans3TextTheme(),
         appBarTheme: const AppBarTheme(
@@ -69,9 +59,9 @@ class AppTheme {
         ),
       );
 
-  static ThemeData get dark => ThemeData(
+  static ThemeData dark([Color seed = AppColors.seedBlue]) => ThemeData(
         useMaterial3: true,
-        colorScheme: _darkScheme(),
+        colorScheme: _darkScheme(seed),
         scaffoldBackgroundColor: AppColors.darkBackground,
         textTheme: GoogleFonts.sourceSans3TextTheme(ThemeData.dark().textTheme),
         appBarTheme: const AppBarTheme(

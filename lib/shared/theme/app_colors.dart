@@ -55,14 +55,25 @@ class AttendanceStateColors {
     };
   }
 
+  /// Buena asistencia (≥75%) → primary del tema
+  /// En riesgo (50–74%)      → tertiary del tema
+  /// Mala (<50%)             → error del tema
   Color forPorcentaje(int porcentaje) {
     if (porcentaje >= 75) return presente;
     if (porcentaje >= 50) return atrasado;
     return ausente;
   }
 
+  /// Deriva los colores de estado desde el [ColorScheme] activo del tema.
+  ///
+  /// • Modo daltónico: paleta Okabe-Ito (sin cambios).
+  /// • Modo normal: colores semánticos del esquema Material You.
+  ///   - presente   → [ColorScheme.primary]
+  ///   - ausente    → [ColorScheme.error]
+  ///   - justificado → [ColorScheme.secondary]
+  ///   - atrasado   → [ColorScheme.tertiary]  (tono cálido del tema)
   static AttendanceStateColors resolve({
-    required Brightness brightness,
+    required ColorScheme colorScheme,
     required bool colorBlindMode,
   }) {
     if (colorBlindMode) {
@@ -74,20 +85,11 @@ class AttendanceStateColors {
       );
     }
 
-    if (brightness == Brightness.dark) {
-      return const AttendanceStateColors(
-        presente: AppColors.statePresenteDark,
-        ausente: AppColors.stateAusenteDark,
-        justificado: AppColors.stateJustificadoDark,
-        atrasado: AppColors.stateAtrasadoDark,
-      );
-    }
-
-    return const AttendanceStateColors(
-      presente: AppColors.statePresente,
-      ausente: AppColors.stateAusente,
-      justificado: AppColors.stateJustificado,
-      atrasado: AppColors.stateAtrasado,
+    return AttendanceStateColors(
+      presente: colorScheme.primary,
+      ausente: colorScheme.error,
+      justificado: colorScheme.secondary,
+      atrasado: colorScheme.tertiary,
     );
   }
 }

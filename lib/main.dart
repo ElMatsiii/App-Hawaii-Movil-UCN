@@ -47,8 +47,8 @@ class TongoyApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Tongoy UCN',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      theme: AppTheme.light(settings.seedColorValue),
+      darkTheme: AppTheme.dark(settings.seedColorValue),
       themeMode: settings.themeMode,
       routerConfig: router,
       builder: (context, child) {
