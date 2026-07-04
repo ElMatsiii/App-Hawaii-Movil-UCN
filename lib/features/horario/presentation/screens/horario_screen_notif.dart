@@ -18,15 +18,12 @@ class HorarioScreen extends ConsumerStatefulWidget {
 }
 
 class _HorarioScreenState extends ConsumerState<HorarioScreen> {
-  final _searchController = TextEditingController();
-  bool _misRamosActivado = false;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authState = ref.read(authProvider);
-      if (authState is AuthAuthenticated && !_misRamosActivado) {
+      if (authState is AuthAuthenticated) {
         _activarMisRamos();
       }
     });
@@ -34,14 +31,11 @@ class _HorarioScreenState extends ConsumerState<HorarioScreen> {
 
   @override
   void dispose() {
-    _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _activarMisRamos() async {
-    _misRamosActivado = true;
-    _searchController.text = ':';
-    ref.read(horarioSearchProvider.notifier).state = ':';
+    ref.read(misRamosActivoProvider.notifier).state = true;
 
     // Pre-poblar el filtro de carrera con la carrera del usuario logueado.
     final carreraId = await ref.read(carreraUsuarioProvider.future);
@@ -51,9 +45,7 @@ class _HorarioScreenState extends ConsumerState<HorarioScreen> {
   }
 
   void _desactivarMisRamos() {
-    _misRamosActivado = false;
-    _searchController.clear();
-    ref.read(horarioSearchProvider.notifier).state = '';
+    ref.read(misRamosActivoProvider.notifier).state = false;
     ref.read(horarioFiltroProvider.notifier).reset();
     ref.read(modoVistaHorarioProvider.notifier).state =
         ModoVistaHorario.estudiante;
@@ -69,15 +61,14 @@ class _HorarioScreenState extends ConsumerState<HorarioScreen> {
     final esAyudante =
         ref.watch(esAyudanteProvider).valueOrNull ?? false;
     final modo = ref.watch(modoVistaHorarioProvider);
-    final search = ref.watch(horarioSearchProvider);
-    final modoToggleVisible = esAyudante && search == ':';
-
+    final misRamosActivo = ref.watch(misRamosActivoProvider);
+    final modoToggleVisible = esAyudante && misRamosActivo;
     ref
       ..listen<AuthState>(authProvider, (previous, next) {
-        if (next is AuthAuthenticated && !_misRamosActivado) {
+        if (next is AuthAuthenticated && !misRamosActivo) {
           _activarMisRamos();
         } else if (next is AuthUnauthenticated || next is AuthError) {
-          if (_misRamosActivado) _desactivarMisRamos();
+          if (misRamosActivo) _desactivarMisRamos();
         }
       })
 
@@ -179,7 +170,6 @@ class _HorarioScreenState extends ConsumerState<HorarioScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: HorarioSearchBar(
-                  controller: _searchController,
                   onChanged: (text) =>
                       ref.read(horarioSearchProvider.notifier).state = text,
                 ),
@@ -245,7 +235,7 @@ class _HorarioScreenState extends ConsumerState<HorarioScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => HorarioFiltrosSheet(misRamosActivo: false, onMisRamosToggle: (bool value) {  },),
+      builder: (_) => const HorarioFiltrosSheet(),
     );
   }
 }

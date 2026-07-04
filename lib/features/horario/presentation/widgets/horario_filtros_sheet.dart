@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utils/text_normalize.dart';
+import '../../../auth/presentation/providers/auth_provider_notif.dart';
 import '../../domain/entities/horario_entity.dart';
 import '../providers/horario_provider_notif.dart';
 
@@ -20,12 +21,7 @@ const _diasAbrev = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 // ── Sheet principal ───────────────────────────────────────────────────────────
 
 class HorarioFiltrosSheet extends ConsumerStatefulWidget {
-  final bool misRamosActivo;
-  final ValueChanged<bool> onMisRamosToggle;
-
-  const HorarioFiltrosSheet({
-    required this.misRamosActivo, required this.onMisRamosToggle, super.key,
-  });
+  const HorarioFiltrosSheet({super.key});
 
   @override
   ConsumerState<HorarioFiltrosSheet> createState() =>
@@ -54,9 +50,11 @@ class _HorarioFiltrosSheetState extends ConsumerState<HorarioFiltrosSheet> {
     final carrerasAsync = ref.watch(carrerasDisponiblesProvider);
     final cursosAsync = ref.watch(cursosDisponiblesProvider);
     final colors = Theme.of(context).colorScheme;
+    final misRamosActivo = ref.watch(misRamosActivoProvider);
+    final currentUser = ref.watch(currentUserProvider);
 
     // Cuenta de filtros activos (sin semestre)
-    final filtroCounts = _contarFiltrosActivos(filtro);
+    final filtroCounts = _contarFiltrosActivos(filtro, misRamosActivo);
 
     return DraggableScrollableSheet(
       expand: false,
@@ -138,15 +136,17 @@ class _HorarioFiltrosSheetState extends ConsumerState<HorarioFiltrosSheet> {
                 controller: controller,
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
                 children: [
-                  // ── Mis Ramos ──────────────────────────────────────────
-                  _MisRamosToggle(
-                    activo: widget.misRamosActivo,
-                    onToggle: (v) {
-                      widget.onMisRamosToggle(v);
-                      if (v) Navigator.pop(context);
-                    },
-                  ),
-                  const SizedBox(height: 20),
+                  // ── Mis Ramos (solo si hay sesión activa) ─────────────
+                  if (currentUser != null) ...[
+                    _MisRamosToggle(
+                      activo: misRamosActivo,
+                      onToggle: (v) {
+                        ref.read(misRamosActivoProvider.notifier).state = v;
+                        if (v) Navigator.pop(context);
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                  ],
 
                   // ── Sección: Académico ─────────────────────────────────
                   const _SeccionLabel(
@@ -350,9 +350,9 @@ class _HorarioFiltrosSheetState extends ConsumerState<HorarioFiltrosSheet> {
     );
   }
 
-  int _contarFiltrosActivos(HorarioFiltro filtro) {
+  int _contarFiltrosActivos(HorarioFiltro filtro, bool misRamosActivo) {
     var count = 0;
-    if (widget.misRamosActivo) count++;
+    if (misRamosActivo) count++;
     if (filtro.area != -1) count++;
     if (filtro.sala != -1) count++;
     if (filtro.profesor != -1) count++;

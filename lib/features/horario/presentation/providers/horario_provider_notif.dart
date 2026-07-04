@@ -215,14 +215,19 @@ final notificacionesProgramadasProvider = FutureProvider<void>((ref) async {
 
 final horarioSearchProvider = StateProvider<String>((ref) => '');
 
+// ── Toggle "Mis Ramos" (reemplaza la lógica del ':' en el search) ─────────────
+
+final misRamosActivoProvider = StateProvider<bool>((ref) => false);
+
 /// Horario final con búsqueda y filtros locales aplicados.
 final horarioFiltradoProvider =
     Provider<AsyncValue<List<HorarioItemEntity>>>((ref) {
   final horario = ref.watch(horarioProvider);
   final search = ref.watch(horarioSearchProvider).trim();
   final filtro = ref.watch(horarioFiltroProvider);
+  final misRamosActivo = ref.watch(misRamosActivoProvider);
 
-  if (search == ':') {
+  if (misRamosActivo) {
     final currentUser = ref.watch(currentUserProvider);
     if (currentUser == null) {
       return const AsyncData([]);
@@ -248,23 +253,21 @@ final horarioFiltradoProvider =
                   )
                   .toList(),
               filtro,
-              '',
+              search,
             ),
           );
         }
 
         return horario.whenData(
           (items) {
-            var misItems = items
-                .where((i) => roles.comoEstudiante.contains(i.idCurso))
-                .toList();
-            // Filtro adicional por carrera del usuario (sin tocar horarioFiltroProvider)
-            if (carreraUsuario != null) {
-              misItems = misItems
-                  .where((i) => i.carreras.any((c) => c.id == carreraUsuario))
-                  .toList();
-            }
-            return _aplicarFiltrosLocales(misItems, filtro, '');
+            // Mostrar solo si está inscrito Y pertenece a la carrera del usuario.
+            final misItems = items.where((i) {
+              final inscrito = roles.comoEstudiante.contains(i.idCurso);
+              final esDeCarrera = carreraUsuario == null ||
+                  i.carreras.any((c) => c.id == carreraUsuario);
+              return inscrito && esDeCarrera;
+            }).toList();
+            return _aplicarFiltrosLocales(misItems, filtro, search);
           },
         );
       },

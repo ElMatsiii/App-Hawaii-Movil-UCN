@@ -50,16 +50,12 @@ class _HorarioSearchBarState extends ConsumerState<HorarioSearchBar> {
   @override
   Widget build(BuildContext context) {
     final text = _controller.text;
-    final esMisRamos = text.trim() == ':';
 
     return TextField(
       controller: _controller,
       decoration: InputDecoration(
-        hintText: 'Buscar ramo, profesor, sala... (: = mis ramos)',
-        prefixIcon: Icon(
-          esMisRamos ? Icons.bookmark : Icons.search,
-          size: 20,
-        ),
+        hintText: 'Buscar ramo, profesor, sala...',
+        prefixIcon: const Icon(Icons.search, size: 20),
         suffixIcon: text.isNotEmpty
             ? IconButton(
                 icon: const Icon(Icons.clear, size: 18),
