@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hawaii_app/features/auth/presentation/providers/auth_provider_notif.dart';
 
 import '../../../../core/constants/api_constants.dart';
+import '../../../../core/errors/app_error.dart';
+import '../../../../core/errors/result.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/utils/json_read.dart';
 import '../domain/entities/notas_entities.dart';
@@ -24,62 +26,78 @@ class NotasRemoteDataSource {
   final Dio _dio;
   const NotasRemoteDataSource(this._dio);
 
-  Future<List<AsistenciaCursoEntity>> fetchAsistencias(int semestreId) async {
-    final response = await _dio.get<List<dynamic>>(
-      ApiConstants.notasEstudiante,
-      queryParameters: <String, dynamic>{'s': semestreId, 'op': 'as'},
-    );
-
-    return asJsonMapList(response.data).map((e) {
-      final porcentaje = readInt(
-        _firstKey(e, ['porcentaje', 'por', 'pct', 'porc']),
-      );
-      final presentes = readInt(
-        _firstKey(e, ['presentes', 'pre', 'asistidas', 'asistencias']),
-      );
-      final total = readInt(
-        _firstKey(e, ['total', 'tot', 'clases', 'sesiones']),
+  Future<Result<List<AsistenciaCursoEntity>>> fetchAsistencias(int semestreId) async {
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        ApiConstants.notasEstudiante,
+        queryParameters: <String, dynamic>{'s': semestreId, 'op': 'as'},
       );
 
-      return AsistenciaCursoEntity(
-        nombre: readString(e['nombre']),
-        codigo: readString(e['codigo']),
-        seccion: readString(e['seccion']),
-        porcentaje: porcentaje,
-        presentes: presentes,
-        total: total,
-      );
-    }).toList();
+      final list = asJsonMapList(response.data).map((e) {
+        final porcentaje = readInt(
+          _firstKey(e, ['porcentaje', 'por', 'pct', 'porc']),
+        );
+        final presentes = readInt(
+          _firstKey(e, ['presentes', 'pre', 'asistidas', 'asistencias']),
+        );
+        final total = readInt(
+          _firstKey(e, ['total', 'tot', 'clases', 'sesiones']),
+        );
+
+        return AsistenciaCursoEntity(
+          nombre: readString(e['nombre']),
+          codigo: readString(e['codigo']),
+          seccion: readString(e['seccion']),
+          porcentaje: porcentaje,
+          presentes: presentes,
+          total: total,
+        );
+      }).toList();
+
+      return Success(list);
+    } on DioException catch (e) {
+      return Failure(dioToAppError(e));
+    } catch (e) {
+      return Failure(UnknownError(e.toString()));
+    }
   }
 
-  Future<List<NotasCursoEntity>> fetchNotas(int semestreId) async {
-    final response = await _dio.get<List<dynamic>>(
-      ApiConstants.notasEstudiante,
-      queryParameters: <String, dynamic>{'s': semestreId, 'op': 'list'},
-    );
-
-    return asJsonMapList(response.data).map((e) {
-      final notasRaw = asJsonMapList(e['notas']);
-      return NotasCursoEntity(
-        codigo: readString(e['codigo']),
-        asignatura: readString(e['asignatura']),
-        seccion: readString(e['seccion']),
-        notas: notasRaw
-            .map(
-              (n) => NotaCursoEntity(
-                nombre: readString(n['nombre']),
-                nota: readString(n['nota']),
-              ),
-            )
-            .where(
-              (n) =>
-                  n.nota.isNotEmpty &&
-                  n.nombre != 'Nombre' &&
-                  n.nombre != 'Par',
-            )
-            .toList(),
+  Future<Result<List<NotasCursoEntity>>> fetchNotas(int semestreId) async {
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        ApiConstants.notasEstudiante,
+        queryParameters: <String, dynamic>{'s': semestreId, 'op': 'list'},
       );
-    }).toList();
+
+      final list = asJsonMapList(response.data).map((e) {
+        final notasRaw = asJsonMapList(e['notas']);
+        return NotasCursoEntity(
+          codigo: readString(e['codigo']),
+          asignatura: readString(e['asignatura']),
+          seccion: readString(e['seccion']),
+          notas: notasRaw
+              .map(
+                (n) => NotaCursoEntity(
+                  nombre: readString(n['nombre']),
+                  nota: readString(n['nota']),
+                ),
+              )
+              .where(
+                (n) =>
+                    n.nota.isNotEmpty &&
+                    n.nombre != 'Nombre' &&
+                    n.nombre != 'Par',
+              )
+              .toList(),
+        );
+      }).toList();
+
+      return Success(list);
+    } on DioException catch (e) {
+      return Failure(dioToAppError(e));
+    } catch (e) {
+      return Failure(UnknownError(e.toString()));
+    }
   }
 }
 
@@ -90,7 +108,9 @@ final asistenciasProvider =
     if (usuario == null) return [];
 
     final ds = ref.watch(notasRemoteProvider);
-    return ds.fetchAsistencias(semestreId);
+    final result = await ds.fetchAsistencias(semestreId);
+    if (result is Success<List<AsistenciaCursoEntity>>) return result.data;
+    throw Exception((result as Failure<List<AsistenciaCursoEntity>>).error.message);
   },
 );
 
@@ -100,6 +120,8 @@ final notasProvider = FutureProvider.family<List<NotasCursoEntity>, int>(
     if (usuario == null) return [];
 
     final ds = ref.watch(notasRemoteProvider);
-    return ds.fetchNotas(semestreId);
+    final result = await ds.fetchNotas(semestreId);
+    if (result is Success<List<NotasCursoEntity>>) return result.data;
+    throw Exception((result as Failure<List<NotasCursoEntity>>).error.message);
   },
 );

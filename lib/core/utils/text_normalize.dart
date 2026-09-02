@@ -7,3 +7,10 @@ String normalizarBusqueda(String texto) {
   }
   return resultado;
 }
+
+/// Extrae el nombre limpio y corto de un curso eliminando códigos entre paréntesis.
+/// Ej: "Electivo Desarrollo Basado en Plataforma (ECIN-00003) {C1}" -> "Electivo Desarrollo Basado en Plataforma"
+String nombreCursoCorto(String nombreCompleto) {
+  final match = RegExp(r'^(.+?)\s*\(').firstMatch(nombreCompleto);
+  return match?.group(1)?.trim() ?? nombreCompleto;
+}

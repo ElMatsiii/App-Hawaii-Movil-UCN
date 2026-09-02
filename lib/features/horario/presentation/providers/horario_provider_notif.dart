@@ -7,7 +7,6 @@ import '../../../../core/utils/json_read.dart';
 import '../../../../core/utils/text_normalize.dart';
 import '../../../auth/presentation/providers/auth_provider_notif.dart';
 import '../../../mis_cursos/data/mis_cursos_datasource.dart';
-import '../../../mis_cursos/domain/entities/curso_usuario_entity.dart';
 import '../../data/repositories/horario_repository.dart';
 import '../../domain/entities/horario_entity.dart';
 import '../../domain/usecases/horario_usecases.dart';
@@ -139,18 +138,15 @@ final idsCursosPorRolProvider = FutureProvider<RolesCursos>((ref) async {
     return (comoEstudiante: <int>{}, comoProfesor: <int>{});
   }
 
-  final repo = ref.watch(misCursosRepositoryProvider);
-  final result = await repo.getCursos(currentUser.rut, semestreId);
+  final cursos = await ref.watch(
+    misCursosProvider((usuario: currentUser.rut, semestre: semestreId)).future,
+  );
 
-  if (result is! Success<List<CursoUsuarioEntity>>) {
-    return (comoEstudiante: <int>{}, comoProfesor: <int>{});
-  }
-
-  final comoEstudiante = result.data
+  final comoEstudiante = cursos
       .where((c) => !c.esProfesor)
       .expand((c) => c.todosLosIds)
       .toSet();
-  final comoProfesor = result.data
+  final comoProfesor = cursos
       .where((c) => c.esProfesor)
       .expand((c) => c.todosLosIds)
       .toSet();
@@ -171,13 +167,12 @@ final esAyudanteProvider = FutureProvider<bool>((ref) async {
   final semestre = semestreActualOrNull(master);
   if (semestre == null) return false;
 
-  final repo = ref.watch(misCursosRepositoryProvider);
-  final result = await repo.getCursos(currentUser.rut, semestre.id);
+  final cursos = await ref.watch(
+    misCursosProvider((usuario: currentUser.rut, semestre: semestre.id)).future,
+  );
 
-  if (result is! Success<List<CursoUsuarioEntity>>) return false;
-
-  final tieneComoEstudiante = result.data.any((c) => !c.esProfesor);
-  final tieneComoProfesor = result.data.any((c) => c.esProfesor);
+  final tieneComoEstudiante = cursos.any((c) => !c.esProfesor);
+  final tieneComoProfesor = cursos.any((c) => c.esProfesor);
   return tieneComoEstudiante && tieneComoProfesor;
 });
 

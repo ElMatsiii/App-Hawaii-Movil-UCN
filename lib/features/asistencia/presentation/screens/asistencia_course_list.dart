@@ -21,11 +21,44 @@ class _ListaCursos extends ConsumerWidget {
 
     return cursosAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: constraints.maxHeight,
+            child: Center(child: Text('Error: $e')),
+          ),
+        ),
+      ),
       data: (cursos) {
         if (cursos.isEmpty) {
-          return const Center(child: Text('No tienes cursos registrados'));
+          return LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: SizedBox(
+                height: constraints.maxHeight,
+                child: const Center(
+                  child: Text('No tienes cursos registrados'),
+                ),
+              ),
+            ),
+          );
         }
+
+        final algunCargando = cursos.any(
+          (c) => ref.watch(
+            asistenciaEstudianteProvider((
+              curso: c.id,
+              semestre: semestreId,
+              rut: usuario,
+            ),),
+          ).isLoading,
+        );
+
+        if (algunCargando) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
         return _buildList(context, cursos);
       },
     );

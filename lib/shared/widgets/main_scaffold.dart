@@ -37,8 +37,6 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback((_) => _syncIndex());
-
     final authState = ref.watch(authProvider);
     final autenticado = authState is AuthAuthenticated;
 
@@ -105,7 +103,7 @@ class _ScaffoldInvitado extends StatelessWidget {
           if (index == 0) {
             shell.goBranch(0, initialLocation: true);
           } else {
-            context.push('/login');
+            context.go('/login');
           }
         },
         destinations: const [

@@ -7,7 +7,8 @@ class _QrScannerSheet extends StatefulWidget {
   State<_QrScannerSheet> createState() => _QrScannerSheetState();
 }
 
-class _QrScannerSheetState extends State<_QrScannerSheet> {
+class _QrScannerSheetState extends State<_QrScannerSheet>
+    with WidgetsBindingObserver {
   final MobileScannerController _controller = MobileScannerController();
   bool _detectado = false;
   double _zoomScale = 0;
@@ -19,11 +20,22 @@ class _QrScannerSheetState extends State<_QrScannerSheet> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _controller.addListener(_syncZoomScale);
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _controller.stop();
+    } else if (state == AppLifecycleState.resumed) {
+      if (!_detectado) _controller.start();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller
       ..removeListener(_syncZoomScale)
       ..dispose();

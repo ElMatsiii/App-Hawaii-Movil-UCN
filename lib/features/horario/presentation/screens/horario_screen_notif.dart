@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../shared/widgets/accessibility_settings_button.dart';
+import '../../../../shared/widgets/info_url_dialog.dart';
 import '../../../../shared/widgets/logout_button.dart';
 import '../../../auth/presentation/providers/auth_provider_notif.dart';
 import '../../domain/entities/horario_entity.dart';
@@ -89,62 +89,13 @@ class _HorarioScreenState extends ConsumerState<HorarioScreen> {
               onPressed: () {
                 showDialog<void>(
                   context: context,
-                  builder: (ctx) => Dialog(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 12, 20),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Expanded(
-                                child: Padding(
-                                  padding: EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    'Instructivos UCN',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.close),
-                                onPressed: () => Navigator.of(ctx).pop(),
-                                visualDensity: VisualDensity.compact,
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Accede a los instructivos de la Escuela de Ingeniería de la UCN.',
-                          ),
-                          const SizedBox(height: 20),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: FilledButton.icon(
-                              icon: const Icon(Icons.open_in_browser),
-                              label: const Text('Abrir'),
-                              onPressed: () {
-                                Navigator.of(ctx).pop();
-                                launchUrl(
-                                  Uri.parse('https://losvilos.ucn.cl/InstructivosEscuelaIngenieria/'),
-                                  mode: LaunchMode.externalApplication,
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  builder: (ctx) => const InfoUrlDialog(
+                    titulo: 'Instructivos UCN',
+                    descripcion:
+                        'Accede a los instructivos de la Escuela de Ingeniería de la UCN.',
+                    url:
+                        'https://losvilos.ucn.cl/InstructivosEscuelaIngenieria/',
+                    labelBoton: 'Abrir',
                   ),
                 );
               },
@@ -205,13 +156,17 @@ class _HorarioScreenState extends ConsumerState<HorarioScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref..invalidate(masterProvider)
-          ..invalidate(horarioProvider);
+          ref
+            ..invalidate(masterProvider)
+            ..invalidate(horarioProvider)
+            ..invalidate(idsCursosPorRolProvider);
           await Future.wait([
             // ignore: body_might_complete_normally_catch_error
             ref.read(masterProvider.future).catchError((_) {}),
             // ignore: body_might_complete_normally_catch_error
             ref.read(horarioProvider.future).catchError((_) {}),
+            // ignore: body_might_complete_normally_catch_error
+            ref.read(idsCursosPorRolProvider.future).catchError((_) {}),
           ]);
         },
         child: master.when(

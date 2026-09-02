@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/utils/text_normalize.dart';
 import '../../domain/entities/horario_entity.dart';
 
 /// Vista de horario por día con PageView deslizable.
@@ -271,56 +272,56 @@ class _BloqueRow extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                width: 52,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Text(
-                        bloque.nombre,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15,
-                          color: colors.primary,
-                        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 52,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text(
+                      bloque.nombre,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: colors.primary,
                       ),
-                      if (bloque.horario != null) ...[
-                        const SizedBox(height: 3),
-                        Text(
-                          bloque.horario!.replaceAll(' - ', '\n'),
-                          style: TextStyle(
-                            fontSize: 9,
-                            color: colors.onSurfaceVariant,
-                            height: 1.3,
-                          ),
-                          textAlign: TextAlign.center,
+                    ),
+                    if (bloque.horario != null) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        bloque.horario!.replaceAll(' - ', '\n'),
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: colors.onSurfaceVariant,
+                          height: 1.3,
                         ),
-                      ],
+                        textAlign: TextAlign.center,
+                      ),
                     ],
-                  ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 10),
-              VerticalDivider(
-                width: 1,
-                thickness: 1,
-                color: colors.outlineVariant,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: colors.outlineVariant, width: 1),
+                  ),
+                ),
+                padding: const EdgeInsets.only(left: 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: items.map((item) => _ClaseCard(item: item)).toList(),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -351,7 +352,7 @@ class _ClaseCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _nombreCorto(item.curso),
+                  nombreCursoCorto(item.curso),
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: colors.onPrimaryContainer,
@@ -398,11 +399,6 @@ class _ClaseCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _nombreCorto(String nombreCompleto) {
-    final match = RegExp(r'^(.+?)\s*\(').firstMatch(nombreCompleto);
-    return match?.group(1)?.trim() ?? nombreCompleto;
   }
 
   void _mostrarDetalle(BuildContext context, HorarioItemEntity item) {

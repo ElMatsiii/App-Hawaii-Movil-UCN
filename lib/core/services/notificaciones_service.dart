@@ -4,6 +4,7 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../features/horario/domain/entities/horario_entity.dart';
+import '../utils/text_normalize.dart';
 
 final notificacionesServiceProvider = Provider<NotificacionesService>((ref) {
   return NotificacionesService();
@@ -91,7 +92,7 @@ class NotificacionesService {
           fechaClase.subtract(const Duration(minutes: _minutosAntes));
       if (fechaNotif.isBefore(ahora)) continue;
 
-      final nombreCorto = _nombreCorto(item.curso);
+      final nombreCorto = nombreCursoCorto(item.curso);
 
       await _plugin.zonedSchedule(
         notifId++,
@@ -144,11 +145,6 @@ class NotificacionesService {
     final minuto = int.tryParse(tiempoInicio[1]);
     if (hora == null || minuto == null) return null;
     return _HoraBloque(hora, minuto);
-  }
-
-  String _nombreCorto(String nombreCompleto) {
-    final match = RegExp(r'^(.+?)\s*\(').firstMatch(nombreCompleto);
-    return match?.group(1)?.trim() ?? nombreCompleto;
   }
 }
 

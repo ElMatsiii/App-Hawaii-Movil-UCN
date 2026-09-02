@@ -77,8 +77,22 @@ class MisCursosScreen extends ConsumerWidget {
           );
 
           Future<void> onRefresh() async {
-            ref..invalidate(masterProvider)
-            ..invalidate(misCursosProvider);
+            ref
+              ..invalidate(masterProvider)
+              ..invalidate(misCursosProvider)
+              ..invalidate(asistenciasProvider)
+              ..invalidate(notasProvider);
+            await Future.wait([
+              // ignore: body_might_complete_normally_catch_error
+              ref.read(masterProvider.future).catchError((_) {}),
+              ref
+                  .read(
+                    misCursosProvider(
+                      (usuario: usuario.rut, semestre: semestreActual.id),
+                    ).future,
+                  )
+                  .catchError((_) => const <CursoUsuarioEntity>[]),
+            ]);
           }
 
           return RefreshIndicator(

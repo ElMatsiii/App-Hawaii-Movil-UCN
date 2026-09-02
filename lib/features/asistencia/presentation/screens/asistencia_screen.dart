@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../shared/settings/accessibility_settings.dart';
 import '../../../../shared/theme/app_colors.dart';
 import '../../../../shared/widgets/accessibility_settings_button.dart';
+import '../../../../shared/widgets/info_url_dialog.dart';
 import '../../../../shared/widgets/logout_button.dart';
 import '../../../auth/presentation/providers/auth_provider_notif.dart';
 import '../../../horario/presentation/providers/horario_provider_notif.dart';
@@ -67,62 +68,13 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
           onPressed: () {
             showDialog<void>(
               context: context,
-              builder: (ctx) => Dialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 12, 20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.only(top: 4),
-                              child: Text(
-                                'Justificar asistencia',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 18,
-                                ),
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () => Navigator.of(ctx).pop(),
-                            visualDensity: VisualDensity.compact,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Serás redirigido al formulario oficial de justificación de asistencia de la UCN.',
-                      ),
-                      const SizedBox(height: 20),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: FilledButton.icon(
-                          icon: const Icon(Icons.open_in_browser),
-                          label: const Text('Abrir formulario'),
-                          onPressed: () {
-                            Navigator.of(ctx).pop();
-                            launchUrl(
-                              Uri.parse('https://docs.google.com/forms/d/e/1FAIpQLScgGuPfQU-W5yYPEU-5M1EcgO0fYskyEjelR2Si434IuTHnuw/viewform'),
-                              mode: LaunchMode.externalApplication,
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              builder: (ctx) => const InfoUrlDialog(
+                titulo: 'Justificar asistencia',
+                descripcion:
+                    'Serás redirigido al formulario oficial de justificación de asistencia de la UCN.',
+                url:
+                    'https://docs.google.com/forms/d/e/1FAIpQLScgGuPfQU-W5yYPEU-5M1EcgO0fYskyEjelR2Si434IuTHnuw/viewform',
+                labelBoton: 'Abrir formulario',
               ),
             );
           },
@@ -138,21 +90,67 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
         icon: const Icon(Icons.qr_code_scanner),
         label: const Text('Pasar asistencia'),
       ),
-      body: master.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (masterData) {
-          final semestreActual = semestreActualOrNull(masterData);
-          if (semestreActual == null) {
-            return const Center(child: Text('No hay semestres disponibles'));
-          }
-
-          return _ListaCursos(
-            usuario: usuario.rut,
-            semestreId: semestreActual.id,
-            onCursoTap: (curso) => _mostrarDetalle(context, curso, semestreActual.id, usuario.rut),
-          );
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final masterData = ref.read(masterProvider).valueOrNull;
+          final semActual = masterData != null ? semestreActualOrNull(masterData) : null;
+          ref
+            ..invalidate(masterProvider)
+            ..invalidate(misCursosProvider)
+            ..invalidate(asistenciasProvider)
+            ..invalidate(asistenciaEstudianteProvider);
+          await Future.wait([
+            // ignore: body_might_complete_normally_catch_error
+            ref.read(masterProvider.future).catchError((_) {}),
+            if (semActual != null)
+              ref
+                  .read(
+                    misCursosProvider(
+                      (usuario: usuario.rut, semestre: semActual.id),
+                    ).future,
+                  )
+                  .catchError((_) => const <CursoUsuarioEntity>[]),
+          ]);
         },
+        child: master.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: SizedBox(
+                height: constraints.maxHeight,
+                child: Center(child: Text('Error: $e')),
+              ),
+            ),
+          ),
+          data: (masterData) {
+            final semestreActual = semestreActualOrNull(masterData);
+            if (semestreActual == null) {
+              return LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: SizedBox(
+                    height: constraints.maxHeight,
+                    child: const Center(
+                      child: Text('No hay semestres disponibles'),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return _ListaCursos(
+              usuario: usuario.rut,
+              semestreId: semestreActual.id,
+              onCursoTap: (curso) => _mostrarDetalle(
+                context,
+                curso,
+                semestreActual.id,
+                usuario.rut,
+              ),
+            );
+          },
+        ),
       ),
     );
   }

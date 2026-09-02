@@ -34,8 +34,12 @@ AppError dioToAppError(DioException e) {
     DioExceptionType.connectionTimeout ||
     DioExceptionType.receiveTimeout ||
     DioExceptionType.sendTimeout =>
-      const NetworkError('La conexión tardó demasiado'),
-    DioExceptionType.connectionError => const NetworkError(),
+      const NetworkError(
+        'El servidor UCN no respondió a tiempo. Verifica si requieres la red/VPN del campus.',
+      ),
+    DioExceptionType.connectionError => const NetworkError(
+        'No se pudo conectar con el servidor UCN (losvilos.ucn.cl). Verifica si requieres la red/VPN institucional o si el servidor está inactivo.',
+      ),
     DioExceptionType.badResponse => ServerError(
         _extractServerMessage(e),
         statusCode: e.response?.statusCode,
