@@ -1,20 +1,32 @@
 part of 'asistencia_screen.dart';
 
 class _QrScannerSheet extends StatefulWidget {
-  const _QrScannerSheet();
+  const _QrScannerSheet({required this.rutUsuario});
+
+  final String rutUsuario;
 
   @override
   State<_QrScannerSheet> createState() => _QrScannerSheetState();
 }
 
 class _QrScannerSheetState extends State<_QrScannerSheet> {
-  final MobileScannerController _controller = MobileScannerController();
+  final MobileScannerController _controller = MobileScannerController(
+    detectionSpeed: DetectionSpeed.unrestricted,
+    formats: const [
+      BarcodeFormat.qrCode,
+      BarcodeFormat.code128,
+      BarcodeFormat.code39,
+      BarcodeFormat.dataMatrix,
+      BarcodeFormat.aztec,
+      BarcodeFormat.pdf417,
+    ],
+  );
   bool _detectado = false;
   double _zoomScale = 0;
 
-  /// Validacion de las URLs de QR (dominio + ruta). Logica pura y testeada en
-  /// test/unit/qr_asistencia_validator_test.dart.
+  /// Validacion de las URLs y codigos OTP de asistencia de Hawaii UCN.
   static const _validator = QrAsistenciaValidator();
+  final _otpService = AsistenciaOtpService();
 
   @override
   void initState() {
@@ -62,36 +74,69 @@ class _QrScannerSheetState extends State<_QrScannerSheet> {
     await _controller.stop();
     if (!mounted) return;
 
-    // Capturamos el messenger antes del pop para no usar el context tras los
-    // await (evita el lint use_build_context_synchronously y que el aviso se
-    // pierda cuando el bottom sheet ya se cerro).
     final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
 
-    final uri = Uri.tryParse(raw);
-    if (uri == null || !_validator.esValido(uri)) {
+    final validacion = _validator.validarContenido(raw);
+
+    // 1. Caso: Codigo OTP dinamico propietario de Hawaii UCN
+    if (validacion.tipo == TipoQrAsistencia.otpDinamico) {
+      if (!validacion.estaVigente) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Codigo OTP expirado (${validacion.segundosTranscurridos}s transcurridos). Solicita un nuevo codigo al profesor.',
+            ),
+            backgroundColor: AppColors.stateAusente,
+          ),
+        );
+        return;
+      }
+
+      final reg = await _otpService.procesarAsistenciaOtp(
+        rawContent: raw,
+        rutEstudiante: widget.rutUsuario,
+        ventanaSegundos: 60,
+      );
+
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('QR no reconocido o endpoint no autorizado'),
+        SnackBar(
+          content: Text(
+            reg.esExitosa
+                ? 'Asistencia registrada con exito. OTP: ${validacion.otp}'
+                : reg.mensaje,
+          ),
+          backgroundColor: reg.esExitosa ? AppColors.statePresente : AppColors.stateAusente,
         ),
       );
       return;
     }
 
-    try {
-      final abierto = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-      if (!abierto) {
+    // 2. Caso: URL oficial de asistencia legacy
+    if (validacion.tipo == TipoQrAsistencia.urlLegacy && validacion.uri != null) {
+      try {
+        final abierto = await launchUrl(validacion.uri!, mode: LaunchMode.inAppBrowserView);
+        if (!abierto) {
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text('No se pudo abrir el enlace de asistencia'),
+            ),
+          );
+        }
+      } catch (e) {
         messenger.showSnackBar(
-          const SnackBar(
-            content: Text('No se pudo abrir el enlace de asistencia'),
-          ),
+          SnackBar(content: Text('No se pudo abrir el enlace: $e')),
         );
       }
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('No se pudo abrir el enlace: $e')),
-      );
+      return;
     }
+
+    // 3. Caso: Formato no reconocido
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('QR no reconocido o endpoint no autorizado'),
+      ),
+    );
   }
 
   @override

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/router/app_router.dart';
 import '../../../../shared/settings/accessibility_settings.dart';
 import '../../../../shared/theme/app_colors.dart';
 import '../../../../shared/widgets/accessibility_settings_button.dart';
@@ -15,6 +16,8 @@ import '../../../mis_cursos/data/mis_cursos_datasource.dart';
 import '../../../mis_cursos/data/notas_datasource.dart';
 import '../../../mis_cursos/domain/entities/curso_usuario_entity.dart';
 import '../../data/asistencia_datasource.dart';
+import '../../data/asistencia_otp_service.dart';
+import '../../domain/qr_asistencia_model.dart';
 import '../../domain/qr_asistencia_validator.dart';
 
 part 'asistencia_course_list.dart';
@@ -128,13 +131,18 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
           },
         ),
         title: const Text('Asistencia'),
-        actions: const [
-          AccessibilitySettingsButton(),
-          LogoutButton(),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.science_outlined),
+            tooltip: 'Laboratorio de pruebas QR',
+            onPressed: () => context.push(AppRoutes.asistenciaTest),
+          ),
+          const AccessibilitySettingsButton(),
+          const LogoutButton(),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _abrirEscaner(context),
+        onPressed: () => _abrirEscaner(context, usuario.rut),
         icon: const Icon(Icons.qr_code_scanner),
         label: const Text('Pasar asistencia'),
       ),
@@ -175,12 +183,12 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
     );
   }
 
-  void _abrirEscaner(BuildContext context) {
+  void _abrirEscaner(BuildContext context, String rutUsuario) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => const _QrScannerSheet(),
+      builder: (_) => _QrScannerSheet(rutUsuario: rutUsuario),
     );
   }
 }

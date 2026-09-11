@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/asistencia/presentation/screens/asistencia_screen.dart';
+import '../../features/asistencia/presentation/screens/asistencia_test_screen.dart';
 import '../../features/auth/presentation/providers/auth_provider_notif.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/horario/presentation/screens/horario_screen_notif.dart';
@@ -76,6 +77,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: AppRoutes.loginName,
         builder: (_, __) => const LoginScreen(),
       ),
+      GoRoute(
+        path: AppRoutes.asistenciaTest,
+        name: AppRoutes.asistenciaTestName,
+        builder: (_, __) => const AsistenciaTestScreen(),
+      ),
     ],
   );
 });
@@ -95,6 +101,8 @@ abstract class AppRoutes {
   static const misCursosName = 'mis-cursos';
   static const asistencia = '/asistencia';
   static const asistenciaName = 'asistencia';
+  static const asistenciaTest = '/asistencia/test';
+  static const asistenciaTestName = 'asistencia-test';
   static const login = '/login';
   static const loginName = 'login';
 }
