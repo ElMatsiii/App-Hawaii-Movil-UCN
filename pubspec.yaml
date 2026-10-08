@@ -46,6 +46,10 @@ dependencies:
  
   # Autenticación con cuenta de Google del dispositivo
   google_sign_in: ^7.2.0
+
+  # Bluetooth Low Energy & Permisos para Asistencia por Beacon
+  flutter_blue_plus: ^2.3.14
+  permission_handler: ^13.0.2
  
 dev_dependencies:
   flutter_test:

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../shared/settings/accessibility_settings.dart';
@@ -15,10 +16,13 @@ import '../../../mis_cursos/data/mis_cursos_datasource.dart';
 import '../../../mis_cursos/data/notas_datasource.dart';
 import '../../../mis_cursos/domain/entities/curso_usuario_entity.dart';
 import '../../data/asistencia_datasource.dart';
+import '../../domain/beacon_attendance_models.dart';
 import '../../domain/qr_asistencia_validator.dart';
+import '../providers/bluetooth_asistencia_provider.dart';
 
 part 'asistencia_course_list.dart';
 part 'asistencia_detail.dart';
+part 'bluetooth_asistencia_sheet.dart';
 part 'qr_scanner_sheet.dart';
 
 //pantalla principal
@@ -133,10 +137,28 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
           LogoutButton(),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _abrirEscaner(context),
-        icon: const Icon(Icons.qr_code_scanner),
-        label: const Text('Pasar asistencia'),
+      floatingActionButton: master.when(
+        data: (masterData) {
+          final semestreActual = semestreActualOrNull(masterData);
+          if (semestreActual == null) return const SizedBox.shrink();
+          final cursosAsync = ref.watch(
+            misCursosProvider((usuario: usuario.rut, semestre: semestreActual.id)),
+          );
+          final cursos = cursosAsync.valueOrNull ?? const [];
+
+          return FloatingActionButton.extended(
+            onPressed: () => _mostrarOpcionesAsistencia(
+              context,
+              cursos,
+              usuario.rut,
+              semestreActual.id,
+            ),
+            icon: const Icon(Icons.sensors),
+            label: const Text('Pasar asistencia'),
+          );
+        },
+        loading: () => const SizedBox.shrink(),
+        error: (_, __) => const SizedBox.shrink(),
       ),
       body: master.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -153,6 +175,123 @@ class _AsistenciaScreenState extends ConsumerState<AsistenciaScreen> {
             onCursoTap: (curso) => _mostrarDetalle(context, curso, semestreActual.id, usuario.rut),
           );
         },
+      ),
+    );
+  }
+
+  void _mostrarOpcionesAsistencia(
+    BuildContext context,
+    List<CursoUsuarioEntity> cursos,
+    String rutEstudiante,
+    int semestreId,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        final colors = Theme.of(ctx).colorScheme;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: colors.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Registrar Asistencia',
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Elige cómo deseas registrar tu presencia en la clase:',
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: colors.primaryContainer,
+                    child: Icon(
+                      Icons.bluetooth_audio,
+                      color: colors.onPrimaryContainer,
+                    ),
+                  ),
+                  title: const Text('Por Bluetooth (Baliza de clase)'),
+                  subtitle: const Text('Detecta la sala automáticamente sin cámara'),
+                  trailing: const Icon(Icons.chevron_right),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: colors.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _abrirBluetooth(context, cursos, rutEstudiante, semestreId);
+                  },
+                ),
+                const SizedBox(height: 10),
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: colors.secondaryContainer,
+                    child: Icon(
+                      Icons.qr_code_scanner,
+                      color: colors.onSecondaryContainer,
+                    ),
+                  ),
+                  title: const Text('Escanear Código QR'),
+                  subtitle: const Text('Apunta la cámara al QR del profesor'),
+                  trailing: const Icon(Icons.chevron_right),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(
+                      color: colors.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    _abrirEscaner(context);
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _abrirBluetooth(
+    BuildContext context,
+    List<CursoUsuarioEntity> cursos,
+    String rutEstudiante,
+    int semestreId,
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _BluetoothAsistenciaSheet(
+        cursosDisponibles: cursos,
+        rutEstudiante: rutEstudiante,
+        semestreId: semestreId,
       ),
     );
   }

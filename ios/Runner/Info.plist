@@ -67,6 +67,13 @@
 			</dict>
 		</dict>
 	</dict>
+	<!-- Permisos para Asistencia por Bluetooth Beacon (BLE) -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Se requiere Bluetooth para detectar la señal de la sala de clases y registrar tu asistencia automáticamente.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Se requiere Bluetooth para detectar la señal de asistencia de tu profesor.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Se requiere acceso a ubicación aproximada para escanear balizas Bluetooth de asistencia en el aula.</string>
 </dict>
 </plist>
 
